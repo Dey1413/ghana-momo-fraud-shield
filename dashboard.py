@@ -7,9 +7,11 @@ import streamlit.components.v1 as components
 # Page Configuration
 st.set_page_config(page_title="Ghana MoMo Fraud Shield", page_icon="🛡️", layout="wide")
 
-# Neo4j Connection
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password123")
+# Neo4j Connection (Cloud-ready)
+# This checks for Streamlit Secrets first, then falls back to localhost for local testing
+URI = st.secrets.get("NEO4J_URI", "neo4j://localhost:7687")
+db_password = st.secrets.get("NEO4J_PASSWORD", "password123")
+AUTH = ("neo4j", db_password)
 
 @st.cache_resource
 def get_driver():
