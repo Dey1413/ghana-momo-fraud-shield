@@ -38,3 +38,51 @@ A hybrid detection engine that combines:
                         │   Decision   │
                         │ BLOCK/ALLOW  │
                         └──────────────┘
+
+
+## 🛠️ Tech Stack
+- **Backend:** Python, FastAPI
+- **Database:** Neo4j (Graph Database)
+- **Machine Learning:** XGBoost, Scikit-learn, Pandas
+- **Frontend:** Streamlit, Pyvis (Network Visualization)
+- **Deployment:** Streamlit Cloud, Neo4j AuraDB (Free Tier)
+
+## ✨ Key Features
+### 🔍 Fraud Detection Patterns
+- **Modem Farm Detection:** Identifies single devices used by multiple accounts.
+- **Mule Chain Analysis:** Traces fund flows through multiple accounts.
+- **SIM Swap Detection:** Flags accounts with recent SIM changes followed by high-value transfers.
+- **Behavioral Anomaly Detection:** ML model catches unusual transaction patterns.
+
+### 📊 Interactive Dashboard
+- Real-time threat metrics (active modem farms, mule chains).
+- Network graph visualization of fraud syndicates.
+- Live AI risk scoring demo.
+- Professional cybersecurity UI.
+
+---
+
+## 📸 Dashboard Screenshots
+
+### 1. Real-Time Threat Metrics
+![Dashboard Metrics](metrics.png)
+
+### 2. Fraud Syndicate Network Visualization
+![Network Graph](graph.png)
+
+### 3. AI Risk Scoring in Action
+![Blocked Transaction](blocked.png)
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.10+
+- Neo4j Database (local Docker or cloud AuraDB)
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Dey1413/ghana-momo-fraud-shield.git
+   cd ghana-momo-fraud-shield
