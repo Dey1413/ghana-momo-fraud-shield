@@ -10,8 +10,9 @@ st.set_page_config(page_title="Ghana MoMo Fraud Shield", page_icon="🛡️", la
 # Neo4j Connection (Cloud-ready)
 # This checks for Streamlit Secrets first, then falls back to localhost for local testing
 URI = st.secrets.get("NEO4J_URI", "neo4j://localhost:7687")
+db_username = st.secrets.get("NEO4J_USERNAME", "neo4j")
 db_password = st.secrets.get("NEO4J_PASSWORD", "password123")
-AUTH = ("neo4j", db_password)
+AUTH = (db_username, db_password)
 
 @st.cache_resource
 def get_driver():
