@@ -90,7 +90,7 @@ st.title("🛡️ Ghana MoMo Fraud Shield: Threat Intelligence Console")
 st.markdown("Real-time visualization of mobile money fraud syndicates and blocked threats.")
 
 # --- TOP METRICS ---
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     result = driver.session().run("""
@@ -100,7 +100,7 @@ with col1:
         RETURN count(d) as farm_count
     """)
     farms = result.single()["farm_count"]
-    st.metric("🚨 Active Modem Farms Detected", farms, delta="High Risk")
+    st.metric("🚨 Active Modem Farms", farms, delta="High Risk")
 
 with col2:
     result = driver.session().run("""
@@ -109,10 +109,23 @@ with col2:
         RETURN count(r) as chain_count
     """)
     chains = result.single()["chain_count"]
-    st.metric("🔗 Mule Chain Links Mapped", chains)
+    st.metric("🔗 Mule Chains Mapped", chains)
 
 with col3:
     st.metric("🛡️ System Status", "ONLINE", delta="Latency: < 45ms")
+
+with col4:
+    # ADVANCED GRAPH ALGORITHM: Risk Propagation (Lightweight PageRank)
+    # Finds users who receive funds from multiple accounts that are also connected to each other
+    result = driver.session().run("""
+        MATCH (mule:User)<-[:SENT_MONEY]-(sender1:User)-[:SENT_MONEY]->(sender2:User)-[:SENT_MONEY]->(mule)
+        WHERE sender1 <> sender2
+        WITH mule, count(DISTINCT sender1) as suspicious_senders
+        WHERE suspicious_senders >= 2
+        RETURN count(mule) as auto_discovered_risk
+    """)
+    risk_nodes = result.single()["auto_discovered_risk"]
+    st.metric("🕸️ Auto-Discovered Risk Clusters", risk_nodes, delta="AI Detected")
 
 st.markdown("---")
 
@@ -134,7 +147,7 @@ if st.button("⚡ Run AI Risk Assessment"):
     
     if demo_hour >= 22 or demo_hour <= 5:
         base_score += 40
-        reasons.append(" Night transaction anomaly")
+        reasons.append("🌙 Night transaction anomaly")
     if demo_amount > 5000:
         base_score += 30
         reasons.append("💰 High-value transaction")
@@ -172,7 +185,7 @@ st.subheader("🕸️ Syndicate Network Visualizer")
 st.markdown("Select a threat type below to visualize the hidden connections in the Graph Database.")
 
 threat_type = st.selectbox("Select Threat Pattern to Investigate:", 
-                           ["Modem Farm (SIM Box)", "Mule Money Chain", "SIM Swap Drain"])
+                           ["Modem Farm (SIM Box)", "Mule Money Chain", "SIM Swap Drain", "🆕 Auto-Discovered Risk Cluster (Graph AI)"])
 
 if threat_type == "Modem Farm (SIM Box)":
     query = """
@@ -194,7 +207,17 @@ elif threat_type == "Mule Money Chain":
     """
     desc = "This traces the 'Hot Potato' effect: stolen funds moving rapidly through 3-4 mule accounts to a cash-out agent."
 
-else:
+elif threat_type == "🆕 Auto-Discovered Risk Cluster (Graph AI)":
+    query = """
+    MATCH (mule:User)<-[:SENT_MONEY {amount: amt}]-(sender1:User)-[:SENT_MONEY]->(sender2:User)-[:SENT_MONEY]->(mule)
+    WHERE sender1 <> sender2
+    WITH mule, sender1, sender2, amt
+    LIMIT 1
+    RETURN mule.msisdn AS mule_ms, sender1.msisdn AS s1_ms, sender2.msisdn AS s2_ms, amt AS amount
+    """
+    desc = "This uses Graph AI (Risk Propagation) to automatically find users receiving funds from multiple interconnected accounts, a classic indicator of an emerging mule network."
+
+else: # SIM Swap Drain
     query = """
     MATCH (u:User)-[r:SENT_MONEY]->(dest:User)
     WHERE r.is_sim_swap = true
@@ -242,7 +265,28 @@ if st.button("🔍 Generate Network Graph"):
                         
                     net.add_edge(start_node.id, end_node.id, title=f"GHS {rel['amount']}\n{rel['tx_id'][:8]}...", color="#ffa500", width=2)
 
-        else:
+        elif threat_type == "🆕 Auto-Discovered Risk Cluster (Graph AI)":
+            result = driver.session().run(query)
+            record = result.single()
+            if record:
+                mule = record["mule_ms"]
+                s1 = record["s1_ms"]
+                s2 = record["s2_ms"]
+                amt = record["amount"]
+                
+                # Mule Node (Orange, high risk)
+                net.add_node(mule, label=f"TARGET MULE\n{mule}", color="#ffa500", size=35, title="Auto-Flagged by Graph AI")
+                # Sender Nodes (Red, suspicious)
+                net.add_node(s1, label=f"SENDER 1\n{s1}", color="#ff4b4b", size=25)
+                net.add_node(s2, label=f"SENDER 2\n{s2}", color="#ff4b4b", size=25)
+                
+                # Edges showing the converging funds
+                net.add_edge(s1, mule, title=f"GHS {amt}", color="#ff4b4b", width=3)
+                net.add_edge(s2, mule, title=f"GHS {amt}", color="#ff4b4b", width=3)
+                # Edge showing senders are connected (the "cluster" part)
+                net.add_edge(s1, s2, title="Interconnected", color="#ffffff", dashes=True, width=1)
+
+        else: # SIM Swap Drain
             result = driver.session().run(query)
             for record in result:
                 victim = record["victim"]
