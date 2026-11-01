@@ -19,14 +19,17 @@ except Exception:
 
 AUTH = ("neo4j", db_password)
 
+
 @st.cache_resource
 def get_driver():
     return GraphDatabase.driver(URI, auth=AUTH)
 
+
 driver = get_driver()
 
 # --- PROFESSIONAL CYBERSECURITY CSS ---
-st.markdown("""
+st.markdown(
+    """
     <style>
     /* Base Background and Text */
     .main { background-color: #0e1117; color: #ffffff; }
@@ -84,10 +87,14 @@ st.markdown("""
     .stSelectbox label { color: #ffffff !important; }
     .stSelectbox > div > div { background-color: #161b22; color: #ffffff; border: 1px solid #30363d; }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 st.title("🛡️ Ghana MoMo Fraud Shield: Threat Intelligence Console")
-st.markdown("Real-time visualization of mobile money fraud syndicates and blocked threats.")
+st.markdown(
+    "Real-time visualization of mobile money fraud syndicates and blocked threats."
+)
 
 # --- TOP METRICS ---
 col1, col2, col3, col4 = st.columns(4)
@@ -135,7 +142,9 @@ st.markdown("Simulate a transaction to see the hybrid Graph + ML engine in actio
 
 col_demo1, col_demo2 = st.columns(2)
 with col_demo1:
-    demo_amount = st.number_input("Transaction Amount (GHS)", min_value=10, max_value=50000, value=50)
+    demo_amount = st.number_input(
+        "Transaction Amount (GHS)", min_value=10, max_value=50000, value=50
+    )
     demo_hour = st.slider("Time of Day (Hour)", 0, 23, 14)
 with col_demo2:
     demo_is_new = st.checkbox("First time sending to this recipient?", value=True)
@@ -144,7 +153,7 @@ with col_demo2:
 if st.button("⚡ Run AI Risk Assessment"):
     base_score = 0
     reasons = []
-    
+
     if demo_hour >= 22 or demo_hour <= 5:
         base_score += 40
         reasons.append("🌙 Night transaction anomaly")
@@ -157,9 +166,9 @@ if st.button("⚡ Run AI Risk Assessment"):
     if demo_is_sim_swap:
         base_score += 50
         reasons.append("📱 SIM Swap history detected")
-        
+
     final_score = min(base_score + (demo_amount / 1000), 100)
-    
+
     if final_score >= 70:
         status = "🚫 BLOCKED"
         color = "#ff4b4b"
@@ -169,23 +178,35 @@ if st.button("⚡ Run AI Risk Assessment"):
     else:
         status = "✅ ALLOWED"
         color = "#00ff00"
-        
-    st.markdown(f"""
+
+    st.markdown(
+        f"""
     <div style="background-color: #161b22; padding: 20px; border-radius: 10px; border-left: 6px solid {color}; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
         <h3 style="color: {color}; margin-top: 0; font-size: 2rem;">Decision: {status}</h3>
         <p style="font-size: 1.2rem;"><strong>AI Risk Score:</strong> {final_score:.1f}/100</p>
         <p style="font-size: 1.1rem;"><strong>Triggers:</strong> {', '.join(reasons) if reasons else 'No anomalies detected'}</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown("---")
 
 # --- FRAUD SYNDICATE VISUALIZER ---
 st.subheader("🕸️ Syndicate Network Visualizer")
-st.markdown("Select a threat type below to visualize the hidden connections in the Graph Database.")
+st.markdown(
+    "Select a threat type below to visualize the hidden connections in the Graph Database."
+)
 
-threat_type = st.selectbox("Select Threat Pattern to Investigate:", 
-                           ["Modem Farm (SIM Box)", "Mule Money Chain", "SIM Swap Drain", "🆕 Auto-Discovered Risk Cluster (Graph AI)"])
+threat_type = st.selectbox(
+    "Select Threat Pattern to Investigate:",
+    [
+        "Modem Farm (SIM Box)",
+        "Mule Money Chain",
+        "SIM Swap Drain",
+        "🆕 Auto-Discovered Risk Cluster (Graph AI)",
+    ],
+)
 
 if threat_type == "Modem Farm (SIM Box)":
     query = """
@@ -217,7 +238,7 @@ elif threat_type == "🆕 Auto-Discovered Risk Cluster (Graph AI)":
     """
     desc = "This uses Graph AI (Risk Propagation) to automatically find users receiving funds from multiple interconnected accounts, a classic indicator of an emerging mule network."
 
-else: # SIM Swap Drain
+else:  # SIM Swap Drain
     query = """
     MATCH (u:User)-[r:SENT_MONEY]->(dest:User)
     WHERE r.is_sim_swap = true
@@ -230,9 +251,15 @@ st.info(desc)
 
 if st.button("🔍 Generate Network Graph"):
     with st.spinner("Querying Graph Database and rendering network..."):
-        net = Network(height="600px", width="100%", bgcolor="#0e1117", font_color="white", directed=True)
+        net = Network(
+            height="600px",
+            width="100%",
+            bgcolor="#0e1117",
+            font_color="white",
+            directed=True,
+        )
         net.barnes_hut()
-        
+
         if threat_type == "Modem Farm (SIM Box)":
             result = driver.session().run(query)
             record = result.single()
@@ -240,12 +267,18 @@ if st.button("🔍 Generate Network Graph"):
                 device_id = record["device_id"]
                 users = record["connected_users"]
                 count = record["user_count"]
-                
-                net.add_node(device_id, label=f"DEVICE\n{device_id}", color="#ff4b4b", size=40, title=f"Modem Farm: {count} users")
+
+                net.add_node(
+                    device_id,
+                    label=f"DEVICE\n{device_id}",
+                    color="#ff4b4b",
+                    size=40,
+                    title=f"Modem Farm: {count} users",
+                )
                 for user in users:
                     net.add_node(user, label=user, color="#00d4ff", size=20)
                     net.add_edge(user, device_id, color="#ffffff", title="USES_DEVICE")
-                    
+
         elif threat_type == "Mule Money Chain":
             result = driver.session().run(query)
             record = result.single()
@@ -255,15 +288,31 @@ if st.button("🔍 Generate Network Graph"):
                 for rel in path.relationships:
                     start_node = rel.start_node
                     end_node = rel.end_node
-                    
+
                     if start_node.id not in nodes_added:
-                        net.add_node(start_node.id, label=f"USER\n{start_node['msisdn']}", color="#00d4ff", size=25)
+                        net.add_node(
+                            start_node.id,
+                            label=f"USER\n{start_node['msisdn']}",
+                            color="#00d4ff",
+                            size=25,
+                        )
                         nodes_added.add(start_node.id)
                     if end_node.id not in nodes_added:
-                        net.add_node(end_node.id, label=f"USER\n{end_node['msisdn']}", color="#00d4ff", size=25)
+                        net.add_node(
+                            end_node.id,
+                            label=f"USER\n{end_node['msisdn']}",
+                            color="#00d4ff",
+                            size=25,
+                        )
                         nodes_added.add(end_node.id)
-                        
-                    net.add_edge(start_node.id, end_node.id, title=f"GHS {rel['amount']}\n{rel['tx_id'][:8]}...", color="#ffa500", width=2)
+
+                    net.add_edge(
+                        start_node.id,
+                        end_node.id,
+                        title=f"GHS {rel['amount']}\n{rel['tx_id'][:8]}...",
+                        color="#ffa500",
+                        width=2,
+                    )
 
         elif threat_type == "🆕 Auto-Discovered Risk Cluster (Graph AI)":
             result = driver.session().run(query)
@@ -273,35 +322,59 @@ if st.button("🔍 Generate Network Graph"):
                 s1 = record["s1_ms"]
                 s2 = record["s2_ms"]
                 amt = record["amount"]
-                
+
                 # Mule Node (Orange, high risk)
-                net.add_node(mule, label=f"TARGET MULE\n{mule}", color="#ffa500", size=35, title="Auto-Flagged by Graph AI")
+                net.add_node(
+                    mule,
+                    label=f"TARGET MULE\n{mule}",
+                    color="#ffa500",
+                    size=35,
+                    title="Auto-Flagged by Graph AI",
+                )
                 # Sender Nodes (Red, suspicious)
                 net.add_node(s1, label=f"SENDER 1\n{s1}", color="#ff4b4b", size=25)
                 net.add_node(s2, label=f"SENDER 2\n{s2}", color="#ff4b4b", size=25)
-                
+
                 # Edges showing the converging funds
                 net.add_edge(s1, mule, title=f"GHS {amt}", color="#ff4b4b", width=3)
                 net.add_edge(s2, mule, title=f"GHS {amt}", color="#ff4b4b", width=3)
                 # Edge showing senders are connected (the "cluster" part)
-                net.add_edge(s1, s2, title="Interconnected", color="#ffffff", dashes=True, width=1)
+                net.add_edge(
+                    s1,
+                    s2,
+                    title="Interconnected",
+                    color="#ffffff",
+                    dashes=True,
+                    width=1,
+                )
 
-        else: # SIM Swap Drain
+        else:  # SIM Swap Drain
             result = driver.session().run(query)
             for record in result:
                 victim = record["victim"]
                 fraudster = record["fraudster"]
                 amount = record["amount"]
-                
-                net.add_node(victim, label=f"VICTIM\n{victim}", color="#00ff00", size=30)
-                net.add_node(fraudster, label=f"FRAUDSTER\n{fraudster}", color="#ff4b4b", size=30)
-                net.add_edge(victim, fraudster, title=f"SIM SWAP DRAIN\nGHS {amount}", color="#ff4b4b", width=3, dashes=True)
+
+                net.add_node(
+                    victim, label=f"VICTIM\n{victim}", color="#00ff00", size=30
+                )
+                net.add_node(
+                    fraudster, label=f"FRAUDSTER\n{fraudster}", color="#ff4b4b", size=30
+                )
+                net.add_edge(
+                    victim,
+                    fraudster,
+                    title=f"SIM SWAP DRAIN\nGHS {amount}",
+                    color="#ff4b4b",
+                    width=3,
+                    dashes=True,
+                )
 
         html_path = "graph.html"
         net.save_graph(html_path)
-        with open(html_path, 'r', encoding='utf-8') as f:
+        with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        
+
         components.html(html_content, height=650, scrolling=True)
 
 st.markdown("---")
