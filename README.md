@@ -1,88 +1,39 @@
-# 🛡️ Ghana MoMo Fraud Shield: AI-Powered Fraud Detection System
+# 🛡️ Ghana MoMo Fraud Shield
 
-**Live Demo:** [https://dey1413-ghana-momo-fraud-shield-dashboard-0se13q.streamlit.app](https://dey1413-ghana-momo-fraud-shield-dashboard-0se13q.streamlit.app)
+[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit)](https://share.streamlit.io/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Neo4j](https://img.shields.io/badge/Graph-Neo4j-008CC1?logo=neo4j)](https://neo4j.com/)
+[![Python](https://img.shields.io/badge/ML-XGBoost-336791?logo=python)](https://xgboost.readthedocs.io/)
 
----
+A real-time, hybrid **Graph + Machine Learning** fraud detection engine designed to combat mobile money (MoMo) fraud in Ghana. 
 
-## 🌍 Overview
-A real-time, AI-powered fraud detection system designed to combat mobile money fraud in Ghana. This hybrid system combines **Graph Database analysis** with **Machine Learning** to detect sophisticated fraud patterns including modem farms, mule chains, and SIM swap attacks.
+## 🌐 Live Demo
+🔗 **[Try the Live Dashboard Here](https://dey1413-ghana-momo-fraud-shield.streamlit.app)
 
-## 🎯 Problem Statement
-Mobile money fraud is a critical issue in Ghana, with the Bank of Ghana recording **16,733 fraud cases** in 2024 alone. Traditional rule-based systems fail to detect sophisticated, organized fraud syndicates that use:
-- **Modem Farms (SIM Boxes):** Single devices controlling 5+ fraudulent accounts simultaneously.
-- **Mule Money Chains:** Rapid fund transfers through 3-4 accounts to hide the money trail.
-- **SIM Swap Attacks:** Hijacking accounts and draining funds immediately after a SIM change.
+## 🚨 The Problem
+Mobile money has driven massive financial inclusion in Ghana, but fraud is a critical barrier. Traditional rule-based systems fail because:
+1. **Social Engineering**: Users willingly hand over PINs, bypassing basic security.
+2. **Mule Networks**: Stolen funds are rapidly moved through 3-4 accounts ("hot potato") to hide the trail.
+3. **Modem Farms**: Fraudsters use SIM boxes to manage dozens of accounts from a single physical device.
 
-## 💡 Solution
-A hybrid detection engine that combines:
-1. **Graph Database (Neo4j):** Maps relationships between users, devices, and transactions to identify organized fraud networks.
-2. **Machine Learning (XGBoost):** Analyzes behavioral patterns (time, amount, frequency) to detect anomalies.
-3. **Real-Time API (FastAPI):** Processes transactions in <50ms with instant BLOCK/ALLOW decisions.
-4. **Interactive Dashboard (Streamlit):** Visualizes fraud syndicates and provides threat intelligence for security analysts.
+## 💡 The Solution
+Instead of just checking PINs, this system analyzes the **entire context** of a transaction in < 50ms using a hybrid approach:
+- **Graph Database (Neo4j)**: Maps relationships to catch organized syndicates, modem farms, and mule chains.
+- **Machine Learning (XGBoost)**: Detects behavioral anomalies (e.g., unusual time, abnormal amounts, new recipients) even for brand-new accounts with no history.
 
-## 🏗️ Architecture
-```text
-┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Transaction   │────▶│  FastAPI     │────▶│   Neo4j Graph   │
-│   Request       │     │  Risk Engine │     │   Database      │
-└─────────────────┘     └──────────────┘     └─────────────────┘
-                               │
-                               ▼
-                        ┌──────────────┐
-                        │  XGBoost ML  │
-                        │   Model      │
-                        └──────────────┘
-                               │
-                               ▼
-                        ┌──────────────┐
-                        │   Decision   │
-                        │ BLOCK/ALLOW  │
-                        └──────────────┘
+## 🏗️ System Architecture
 
-
-## 🛠️ Tech Stack
-- **Backend:** Python, FastAPI
-- **Database:** Neo4j (Graph Database)
-- **Machine Learning:** XGBoost, Scikit-learn, Pandas
-- **Frontend:** Streamlit, Pyvis (Network Visualization)
-- **Deployment:** Streamlit Cloud, Neo4j AuraDB (Free Tier)
-
-## ✨ Key Features
-### 🔍 Fraud Detection Patterns
-- **Modem Farm Detection:** Identifies single devices used by multiple accounts.
-- **Mule Chain Analysis:** Traces fund flows through multiple accounts.
-- **SIM Swap Detection:** Flags accounts with recent SIM changes followed by high-value transfers.
-- **Behavioral Anomaly Detection:** ML model catches unusual transaction patterns.
-
-### 📊 Interactive Dashboard
-- Real-time threat metrics (active modem farms, mule chains).
-- Network graph visualization of fraud syndicates.
-- Live AI risk scoring demo.
-- Professional cybersecurity UI.
-
----
-
-## 📸 Dashboard Screenshots
-
-### 1. Real-Time Threat Metrics
-![Dashboard Metrics](metrics.png)
-
-### 2. Fraud Syndicate Network Visualization
-![Network Graph](graph.png)
-
-### 3. AI Risk Scoring in Action
-![Blocked Transaction](blocked.png)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.10+
-- Neo4j Database (local Docker or cloud AuraDB)
-
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Dey1413/ghana-momo-fraud-shield.git
-   cd ghana-momo-fraud-shield
+```mermaid
+graph TD
+    A[MoMo Transaction Request] --> B(FastAPI Risk Engine)
+    B --> C{Hybrid Analysis}
+    C -->|Graph Query| D[(Neo4j AuraDB)]
+    C -->|Behavioral Score| E[XGBoost ML Model]
+    D --> F[Syndicate / Mule Chain Detection]
+    E --> G[Anomaly Detection]
+    F --> H{Risk Scoring Engine}
+    G --> H
+    H -->|Score < 40| I[✅ ALLOW]
+    H -->|Score 40-69| J[⚠️ STEP_UP_AUTH]
+    H -->|Score >= 70| K[🚫 BLOCK]
+    L[Streamlit Dashboard] -.->|Live Visualization| D
