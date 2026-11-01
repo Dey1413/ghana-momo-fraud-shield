@@ -1,5 +1,15 @@
-   streamlit
-   neo4j
-   pyvis
-   pandas
-   numpy
+streamlit
+neo4j
+pyvis
+pandas
+numpy
+fastapi
+uvicorn
+joblib
+scikit-learn
+xgboost
+redis
+requests
+pytest
+httpx
+black
