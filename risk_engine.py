@@ -1,3 +1,4 @@
+import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from neo4j import GraphDatabase
@@ -11,6 +12,9 @@ app = FastAPI(title="Ghana MoMo Fraud Shield - Risk Engine v2 (AI Powered)")
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password123")
 driver = GraphDatabase.driver(URI, auth=AUTH)
+# Telegram Alert Configuration (ADD THESE TWO LINES)
+TELEGRAM_BOT_TOKEN = "9102941463:AAE1cxUoggw-2sDDUXVnyb7tm7_tw8L4WPY"
+TELEGRAM_CHAT_ID = "7271712492"
 
 # Load ML Model at startup
 print("Loading ML Model...")
@@ -123,6 +127,31 @@ def assess_transaction_risk(tx: TransactionRequest):
         decision = "STEP_UP_AUTH"
     else:
         decision = "ALLOW"
+    # --- REAL-TIME ALERTING (ADD THIS BLOCK) ---
+    if decision == "BLOCK":
+        alert_message = f"""
+🚨 *FRAUD BLOCKED* 🚨
+**Risk Score:** {min(risk_score, 100)}/100
+**Sender:** `{tx.sender_msisdn}`
+**Receiver:** `{tx.receiver_msisdn}`
+**Amount:** GHS {tx.amount}
+**Reason:** {reasons[0] if reasons else 'High Risk'}
+        """
+        
+        telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": alert_message,
+            "parse_mode": "Markdown"
+        }
+        
+        try:
+            requests.post(telegram_url, json=payload, timeout=3)
+            print("✅ Telegram alert sent successfully.")
+        except Exception as e:
+            print(f"⚠️ Failed to send Telegram alert: {e}")
+    # --- END ALERTING BLOCK ---
+    
     
     return RiskResponse(
         risk_score=min(risk_score, 100),
