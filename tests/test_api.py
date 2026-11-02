@@ -5,26 +5,34 @@ import sys
 import os
 import jwt
 
-# Add the parent directory to the path so we can import risk_engine
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from risk_engine import app, SECRET_KEY, ALGORITHM
+# ==============================================================================
+# CRITICAL: Mock redis.Redis GLOBALLY before importing risk_engine.
+# This ensures both our custom redis_client AND slowapi's Limiter get the mock,
+# preventing CI/CD from trying to connect to a real Redis server.
+# ==============================================================================
+mock_redis_instance = MagicMock()
+mock_redis_instance.get.return_value = None
+mock_redis_instance.set.return_value = True
+mock_redis_instance.incr.return_value = 1
+mock_redis_instance.eval.return_value = 1
+
+with patch("redis.Redis", return_value=mock_redis_instance):
+    # Add the parent directory to the path so we can import risk_engine
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    from risk_engine import app, SECRET_KEY, ALGORITHM
 
 client = TestClient(app)
 
 
-# Mock the ML model, Redis, and Neo4j to ensure tests are fast and deterministic
+# Mock the ML model and Neo4j to ensure tests are fast and deterministic
 @pytest.fixture(autouse=True)
 def mock_dependencies():
     with patch("risk_engine.ml_model") as mock_ml, patch(
-        "risk_engine.redis_client"
-    ) as mock_redis, patch("risk_engine.driver") as mock_driver:
+        "risk_engine.driver"
+    ) as mock_driver:
 
         # Mock ML model to return a 90% fraud probability (triggers BLOCK)
         mock_ml.predict_proba.return_value = [[0.1, 0.9]]
-
-        # Mock Redis to simulate a Cache MISS, then return a high user count
-        mock_redis.get.return_value = None  # Cache MISS
-        mock_redis.set.return_value = True
 
         # Mock Neo4j session and query result using DICTIONARIES for clean record access
         mock_session = MagicMock()
