@@ -12,7 +12,7 @@ from risk_engine import app, SECRET_KEY, ALGORITHM
 client = TestClient(app)
 
 
-# Mock the ML model and Redis to ensure tests are fast and deterministic
+# Mock the ML model, Redis, and Neo4j to ensure tests are fast and deterministic
 @pytest.fixture(autouse=True)
 def mock_dependencies():
     with patch("risk_engine.ml_model") as mock_ml, patch(
@@ -22,8 +22,8 @@ def mock_dependencies():
         # Mock ML model to return a 90% fraud probability (triggers BLOCK)
         mock_ml.predict_proba.return_value = [[0.1, 0.9]]
 
-        # Mock Redis to simulate a Cache MISS
-        mock_redis.get.return_value = None
+        # Mock Redis to simulate a Cache MISS, then return a high user count
+        mock_redis.get.return_value = None  # Cache MISS
         mock_redis.set.return_value = True
 
         # Mock Neo4j session and query result using DICTIONARIES for clean record access
