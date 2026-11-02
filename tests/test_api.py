@@ -5,26 +5,28 @@ import sys
 import os
 import jwt
 
-# ==============================================================================
-# CRITICAL: Mock redis.Redis GLOBALLY before importing risk_engine.
-# This ensures both our custom redis_client AND slowapi's Limiter get the mock,
-# preventing CI/CD from trying to connect to a real Redis server.
-# ==============================================================================
-mock_redis_instance = MagicMock()
-mock_redis_instance.get.return_value = None
-mock_redis_instance.set.return_value = True
-mock_redis_instance.incr.return_value = 1
-mock_redis_instance.eval.return_value = 1
 
-with patch("redis.Redis", return_value=mock_redis_instance):
-    # Add the parent directory to the path so we can import risk_engine
+# ==============================================================================
+# CRITICAL: Mock slowapi.Limiter globally BEFORE importing risk_engine.
+# This prevents the Limiter from initializing a real Redis connection during tests.
+# ==============================================================================
+def dummy_limiter_decorator(*args, **kwargs):
+    def decorator(func):
+        return func
+
+    return decorator
+
+
+mock_limiter = MagicMock()
+mock_limiter.limit = dummy_limiter_decorator
+
+with patch("slowapi.Limiter", return_value=mock_limiter):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from risk_engine import app, SECRET_KEY, ALGORITHM
 
 client = TestClient(app)
 
 
-# Mock the ML model and Neo4j to ensure tests are fast and deterministic
 @pytest.fixture(autouse=True)
 def mock_dependencies():
     with patch("risk_engine.ml_model") as mock_ml, patch(
@@ -34,7 +36,7 @@ def mock_dependencies():
         # Mock ML model to return a 90% fraud probability (triggers BLOCK)
         mock_ml.predict_proba.return_value = [[0.1, 0.9]]
 
-        # Mock Neo4j session and query result using DICTIONARIES for clean record access
+        # Mock Neo4j session and query result
         mock_session = MagicMock()
         mock_driver.session.return_value.__enter__.return_value = mock_session
 
@@ -54,7 +56,7 @@ def test_health_check():
 
 
 def test_fraud_block_decision():
-    # 1. Generate a valid JWT token for the test using the app's secret key
+    # 1. Generate a valid JWT token
     token_data = {"sub": "test_partner"}
     valid_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
     headers = {"Authorization": f"Bearer {valid_token}"}
