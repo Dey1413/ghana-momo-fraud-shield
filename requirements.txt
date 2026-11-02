@@ -13,3 +13,5 @@ requests
 pytest
 httpx
 black
+PyJWT
+slowapi
