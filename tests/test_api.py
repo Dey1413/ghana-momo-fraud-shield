@@ -7,8 +7,8 @@ import jwt
 
 
 # ==============================================================================
-# CRITICAL: Mock slowapi.Limiter globally BEFORE importing risk_engine.
-# This prevents the Limiter from initializing a real Redis connection during tests.
+# 1. Mock slowapi.Limiter globally BEFORE importing risk_engine.
+# This prevents the Limiter from initializing a real Redis connection during import.
 # ==============================================================================
 def dummy_limiter_decorator(*args, **kwargs):
     def decorator(func):
@@ -27,11 +27,18 @@ with patch("slowapi.Limiter", return_value=mock_limiter):
 client = TestClient(app)
 
 
+# ==============================================================================
+# 2. Mock redis_client, ml_model, and driver during test execution.
+# ==============================================================================
 @pytest.fixture(autouse=True)
 def mock_dependencies():
-    with patch("risk_engine.ml_model") as mock_ml, patch(
-        "risk_engine.driver"
-    ) as mock_driver:
+    with patch("risk_engine.redis_client") as mock_redis, patch(
+        "risk_engine.ml_model"
+    ) as mock_ml, patch("risk_engine.driver") as mock_driver:
+
+        # Mock Redis cache MISS
+        mock_redis.get.return_value = None
+        mock_redis.set.return_value = True
 
         # Mock ML model to return a 90% fraud probability (triggers BLOCK)
         mock_ml.predict_proba.return_value = [[0.1, 0.9]]
