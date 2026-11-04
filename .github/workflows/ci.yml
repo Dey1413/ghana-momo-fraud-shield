@@ -29,6 +29,5 @@ jobs:
       run: |
         black --check .
 
-    - name: Run Pytest
-      run: |
-        pytest tests/ -v
+       - name: Run tests
+      run: PYTHONPATH=. pytest tests/ -v
