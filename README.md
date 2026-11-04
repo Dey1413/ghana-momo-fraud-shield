@@ -1,39 +1,28 @@
-# 🛡️ Ghana MoMo Fraud Shield
+# 🛡️ Ghana MoMo Fraud Shield: Enterprise Real-Time Fraud Detection Engine
 
-[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit)](https://share.streamlit.io/)
-[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Neo4j](https://img.shields.io/badge/Graph-Neo4j-008CC1?logo=neo4j)](https://neo4j.com/)
-[![Python](https://img.shields.io/badge/ML-XGBoost-336791?logo=python)](https://xgboost.readthedocs.io/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![Neo4j](https://img.shields.io/badge/Neo4j-Graph%20Database-008CC1.svg)](https://neo4j.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/Tests-PyTest-brightgreen.svg)](https://docs.pytest.org/)
 
-A real-time, hybrid **Graph + Machine Learning** fraud detection engine designed to combat mobile money (MoMo) fraud in Ghana. 
+A production-grade, microservices-based fraud detection platform designed for mobile money ecosystems. It combines **Graph AI (Neo4j)**, **Machine Learning (XGBoost)**, and **Human-in-the-Loop (HITL)** analytics to detect and block sophisticated fraud syndicates in real-time.
 
-## 🌐 Live Demo
-🔗 **[Try the Live Dashboard Here](https://dey1413-ghana-momo-fraud-shield.streamlit.app)
-
-## 🚨 The Problem
-Mobile money has driven massive financial inclusion in Ghana, but fraud is a critical barrier. Traditional rule-based systems fail because:
-1. **Social Engineering**: Users willingly hand over PINs, bypassing basic security.
-2. **Mule Networks**: Stolen funds are rapidly moved through 3-4 accounts ("hot potato") to hide the trail.
-3. **Modem Farms**: Fraudsters use SIM boxes to manage dozens of accounts from a single physical device.
-
-## 💡 The Solution
-Instead of just checking PINs, this system analyzes the **entire context** of a transaction in < 50ms using a hybrid approach:
-- **Graph Database (Neo4j)**: Maps relationships to catch organized syndicates, modem farms, and mule chains.
-- **Machine Learning (XGBoost)**: Detects behavioral anomalies (e.g., unusual time, abnormal amounts, new recipients) even for brand-new accounts with no history.
+---
 
 ## 🏗️ System Architecture
 
 ```mermaid
 graph TD
-    A[MoMo Transaction Request] --> B(FastAPI Risk Engine)
-    B --> C{Hybrid Analysis}
-    C -->|Graph Query| D[(Neo4j AuraDB)]
-    C -->|Behavioral Score| E[XGBoost ML Model]
-    D --> F[Syndicate / Mule Chain Detection]
-    E --> G[Anomaly Detection]
-    F --> H{Risk Scoring Engine}
-    G --> H
-    H -->|Score < 40| I[✅ ALLOW]
-    H -->|Score 40-69| J[⚠️ STEP_UP_AUTH]
-    H -->|Score >= 70| K[🚫 BLOCK]
-    L[Streamlit Dashboard] -.->|Live Visualization| D
+    Client[📱 Streamlit SOC Dashboard] -->|HTTPS / JWT| API[⚡ FastAPI Risk Engine]
+    
+    subgraph "Core Detection Engine"
+        API -->|1. Check Cache| Redis[(🔴 Redis Cache)]
+        API -->|2. Graph Queries| Neo4j[(🔵 Neo4j Graph DB)]
+        API -->|3. Behavioral Scoring| ML[🧠 XGBoost Model]
+    end
+    
+    API -->|4. Async Alert| Telegram[📱 Telegram Bot API]
+    API -->|5. Generate Report| PDF[📄 PDF Compliance Engine]
+    
+    Analyst[👨‍💼 SOC Analyst] -->|Override / Whitelist| Client

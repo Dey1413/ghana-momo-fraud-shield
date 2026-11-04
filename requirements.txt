@@ -15,3 +15,5 @@ httpx
 black
 PyJWT
 slowapi
+python-dotenv
+fpdf2

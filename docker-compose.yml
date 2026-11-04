@@ -1,0 +1,58 @@
+services:
+  # 1. Neo4j Graph Database
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j-fraud-shield
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+
+  # 2. Redis Cache & Rate Limiter
+  redis:
+    image: redis:alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. FastAPI Risk Engine
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: fraud-shield-api
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - neo4j
+      - redis
+    restart: unless-stopped
+
+  # 4. Streamlit Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: fraud-shield-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - NEO4J_URI=neo4j://neo4j:7687
+      - NEO4J_PASSWORD=password123
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  redis_data:
