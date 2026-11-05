@@ -5,6 +5,7 @@
 [![Neo4j](https://img.shields.io/badge/Neo4j-Graph%20Database-008CC1.svg)](https://neo4j.com/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-PyTest-brightgreen.svg)](https://docs.pytest.org/)
+[![CI/CD](https://github.com/Dey1413/ghana-momo-fraud-shield/actions/workflows/ci.yml/badge.svg)](https://github.com/Dey1413/ghana-momo-fraud-shield/actions)
 
 A production-grade, microservices-based fraud detection platform designed for mobile money ecosystems. It combines **Graph AI (Neo4j)**, **Machine Learning (XGBoost)**, and **Human-in-the-Loop (HITL)** analytics to detect and block sophisticated fraud syndicates in real-time.
 
