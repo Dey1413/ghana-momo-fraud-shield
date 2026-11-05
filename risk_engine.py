@@ -144,7 +144,7 @@ def assess_transaction_risk(
     logger.info(f"Secure request received from user: {current_user}")
     risk_score, reasons, fraud_indicators = 0, [], {}
 
-    # --- OPTIMIZATION 1: Check Whitelist via Redis first (Sub-millisecond) ---
+    # --- 1. Check Whitelist via Redis first (Sub-millisecond) ---
     whitelist_cache_key = f"whitelist:{tx.sender_msisdn}"
     is_whitelisted = redis_client.get(whitelist_cache_key)
 
@@ -158,13 +158,32 @@ def assess_transaction_risk(
             ml_anomaly_score=0,
         )
 
-    # --- OPTIMIZATION 2: Single Session for all Graph Queries ---
+    # --- 2. Calculate ML Score FIRST (so it's available for the rest of the function) ---
+    tx_time = datetime.fromisoformat(tx.timestamp) if tx.timestamp else datetime.now()
+    hour = tx_time.hour
+    is_night = 1 if (hour >= 22 or hour <= 5) else 0
+    is_high_value = 1 if tx.amount > 1000 else 0
+
+    ml_data = pd.DataFrame(
+        [
+            {
+                "amount": tx.amount,
+                "hour_of_day": hour,
+                "is_night_transaction": is_night,
+                "is_high_value": is_high_value,
+            }
+        ]
+    )
+    ml_anomaly_score = round(ml_model.predict_proba(ml_data)[0][1] * 100, 2)
+
+    # --- 3. Single Session for all Graph Queries ---
     with driver.session() as session:
-        # 1. Check DB for whitelist (only if Redis missed)
+        # 3a. Check DB for whitelist (only if Redis missed)
         whitelist_check = session.run(
             "MATCH (u:User {msisdn: $msisdn}) RETURN u.is_whitelisted AS is_white",
             msisdn=tx.sender_msisdn,
         ).single()
+
         if whitelist_check and whitelist_check.get("is_white") is True:
             redis_client.set(whitelist_cache_key, "true", ex=3600)  # Cache for 1 hour
             logger.info(
@@ -178,7 +197,7 @@ def assess_transaction_risk(
                 ml_anomaly_score=0,
             )
 
-        # 2. Modem Farm Check (with Redis Cache)
+        # 3b. Modem Farm Check (with Redis Cache)
         cache_key = f"device_users:{tx.sender_imei}"
         cached_count = redis_client.get(cache_key)
 
@@ -202,7 +221,7 @@ def assess_transaction_risk(
                 f"CRITICAL: Device used by {device_user_count} different accounts (Modem Farm)"
             )
 
-        # ... (Keep the rest of your SIM Swap and Mule Chain queries exactly as they were inside this same 'with' block) ...
+        # 3c. SIM Swap Check
         result = session.run(
             "MATCH (u:User {msisdn: $msisdn})-[r:SENT_MONEY]->(dest:User) WHERE r.is_sim_swap = true RETURN count(r) as sim_swap_count",
             msisdn=tx.sender_msisdn,
@@ -214,6 +233,7 @@ def assess_transaction_risk(
                 f"CRITICAL: Account has {record['sim_swap_count']} SIM swap fraud incidents"
             )
 
+        # 3d. Mule Chain Check
         result = session.run(
             "MATCH path = (u:User {msisdn: $msisdn})<-[:SENT_MONEY*1..3]-(mule:User) WHERE ANY(rel IN relationships(path) WHERE rel.fraud_type = 'MULE_CHAIN') RETURN count(path) as mule_chain_involvement",
             msisdn=tx.receiver_msisdn,
@@ -225,6 +245,7 @@ def assess_transaction_risk(
                 f"CRITICAL: Receiver linked to {record['mule_chain_involvement']} mule chains"
             )
 
+        # 3e. Transaction History Check
         result = session.run(
             "MATCH (sender:User {msisdn: $sender})-[r:SENT_MONEY]->(receiver:User {msisdn: $receiver}) RETURN count(r) as transaction_history",
             sender=tx.sender_msisdn,
@@ -239,6 +260,7 @@ def assess_transaction_risk(
                 )
             fraud_indicators["new_recipient"] = True
 
+    # --- 4. Add ML Score to Total Risk ---
     if ml_anomaly_score > 80:
         risk_score += 30
         reasons.append(f"AI ALERT: Behavioral anomaly score is {ml_anomaly_score}%")
@@ -248,12 +270,14 @@ def assess_transaction_risk(
             f"AI WARNING: Mild behavioral anomaly detected ({ml_anomaly_score}%)"
         )
 
+    # --- 5. Make Decision ---
     decision = (
         "BLOCK"
         if risk_score >= 70
         else ("STEP_UP_AUTH" if risk_score >= 40 else "ALLOW")
     )
 
+    # --- 6. Handle Blocking (Alert + Log to Graph) ---
     if decision == "BLOCK":
         background_tasks.add_task(
             send_telegram_alert_async,
@@ -264,9 +288,7 @@ def assess_transaction_risk(
             reasons[0] if reasons else "High Risk",
         )
 
-        # --- SENIOR DEV UPGRADE: Write Blocked Transactions to Graph for Review ---
         with driver.session() as session:
-            # Use MERGE to create users if they don't exist, then create the relationship
             session.run(
                 """
                 MERGE (sender:User {msisdn: $sender})
@@ -286,13 +308,14 @@ def assess_transaction_risk(
                 risk=min(risk_score, 100),
                 reason=reasons[0] if reasons else "Unknown",
             )
-            print(f"📝 BLOCKED transaction logged to Neo4j for Analyst Review.")
+            logger.info("BLOCKED transaction logged to Neo4j for Analyst Review.")
 
-    # Track metrics before returning
+    # --- 7. Track Metrics ---
     total_requests += 1
     latency = (time.time() - start_time) * 1000  # in ms
     request_latencies.append(latency)
 
+    # --- 8. Return Response ---
     return RiskResponse(
         risk_score=min(risk_score, 100),
         decision=decision,
