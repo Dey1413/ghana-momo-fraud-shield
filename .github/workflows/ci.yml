@@ -6,6 +6,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    # Spin up Redis and Neo4j just like Docker Compose does locally
+    services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      neo4j:
+        image: neo4j:5
+        env:
+          NEO4J_AUTH: neo4j/password123
+        ports:
+          - 7687:7687
+          - 7474:7474
+
     steps:
     - uses: actions/checkout@v4
     
@@ -30,7 +50,7 @@ jobs:
         NEO4J_USER: neo4j
         NEO4J_PASSWORD: password123
         REDIS_URL: redis://localhost:6379
-        JWT_SECRET_KEY: super-secret-fraud-shield-key-2026  # <--- CHANGE THIS LINE
+        JWT_SECRET_KEY: super-secret-fraud-shield-key-2026
         JWT_ALGORITHM: HS256
         TELEGRAM_BOT_TOKEN: dummy-token
         TELEGRAM_CHAT_ID: "123456"
