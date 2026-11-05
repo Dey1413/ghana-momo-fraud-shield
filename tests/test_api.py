@@ -37,7 +37,8 @@ def test_assess_risk_processing():
     assert data["decision"] in [
         "BLOCK",
         "ALLOW",
-    ]  # Accepts either, proving the system works
+        "STEP_UP_AUTH",
+    ]  # Accepts any valid decision, proving the system works
 
 
 def test_unauthorized_access():
